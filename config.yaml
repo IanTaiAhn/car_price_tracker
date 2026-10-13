@@ -1,0 +1,79 @@
+# Car price tracker configuration.
+# Everything the tracker filters on lives here; the code has no hard-coded vehicles.
+
+mileage:
+  miles_per_year: 12000
+  # true:  cap = 12k * (current_year - model_year + 1)   -> a 2025 in 2026 = 24k, a 2020 = 84k
+  # false: cap = 12k * (current_year - model_year)       -> a 2025 in 2026 = 12k, a 2020 = 72k
+  # Either way the minimum cap is one year (12k). Recomputed every run from today's date.
+  count_model_year_as_year_one: true
+  # Keep listings whose mileage couldn't be parsed (shown with a blank mileage) instead of dropping them.
+  keep_unknown_mileage: true
+
+vehicles:
+  - key: rav4_hybrid
+    sheet: RAV4 Hybrid
+    make: Toyota
+    model: RAV4
+    require_hybrid: true
+    min_year: 2022
+    max_year: null            # null = up to next model year
+    trims: [XLE Premium, XSE, Limited, Woodland]
+    # RAV4 Prime / Plug-in Hybrid also say "hybrid" and share trim names; excluded here.
+    # Remove these words if you want plug-ins too.
+    exclude_trim_words: [Prime, Plug-in, PHEV]
+    # The 2026 RAV4 is a redesign; if its trim names differ, add them to `trims`.
+
+  - key: forester
+    sheet: Forester
+    make: Subaru
+    model: Forester
+    exclude_hybrid: true
+    min_year: 2020
+    max_year: 2026
+    trims: [Limited, Touring, Wilderness]
+
+  - key: cx5_carbon
+    sheet: CX-5 Carbon
+    make: Mazda
+    model: CX-5
+    min_year: 2025
+    max_year: 2025
+    trims: [Carbon]
+    exclude_trim_words: [Turbo]   # non-turbo Carbon Edition only
+
+dedup:
+  # Same VIN on two sources = always merged.
+  # Without a VIN, same vehicle + year and mileage/price within these tolerances = possible duplicate.
+  fuzzy_mileage_tolerance: 500
+  fuzzy_price_tolerance: 1000
+  auto_merge_fuzzy: false     # false = keep both and flag "Possible dup" for you to judge
+
+status:
+  # KSL alerts tell us when a car appears, drops in price, or is expiring — never when it sells.
+  # So KSL status is inferred:
+  ksl_expiring_grace_days: 3          # after an "expiring" alert, mark likely_gone after this many days
+  ksl_assume_gone_after_days: 30      # no alert of any kind for this long -> likely_gone (set to KSL's real listing length)
+  # Dealer status is confirmed: a dealer car missing from a successful scrape is marked gone.
+
+email:
+  imap_host: imap.mail.yahoo.com
+  imap_port: 993
+  folder: KSL Alerts           # the Yahoo folder your filter moves KSL alerts into
+  lookback_days: 45
+
+dealers:
+  # Fill in once we've checked the site. Pages are fetched politely: robots.txt is honored,
+  # crawl-delay respected, and the scraper stops (no retries, no workarounds) on any block or challenge.
+  - name: Example Dealer
+    enabled: false
+    base_url: https://www.example.com
+    inventory_urls:
+      - https://www.example.com/used-vehicles/
+    page_param: null           # e.g. "_p" if pages are ?_p=2, ?_p=3 ...
+    max_pages: 10
+    crawl_delay: 1
+
+output:
+  db_path: data/tracker.db
+  xlsx_path: output/car_tracker.xlsx
